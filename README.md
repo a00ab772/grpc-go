@@ -106,3 +106,96 @@ user@DESKTOP-U6PJEA9:/mnt/c/Users/user/Desktop/Documents/GoLangProjects/grpc-go$
 Listening on 0.0.0.0:5003
 
 ```
+
+# Producer and consumer AWS Lambda functions communicating via Kafka events
+
+Lambda doesn't allow to establish persistent TCP connections between two functions like a gRPC standard socket does.
+
+The architecture instead is: Lambda A invokes Lambda B by means of API Gateway or some sort of mechanism like Kafka. In order to maintain the gRPC structure we require to define a shared contract between both the lambda functions.
+
+Here is a simple example of how two lambda functions can use a protobuf serialization contract to communicate via kafka events. 
+
+__The Protocol Buffer Definition (user.proto)__
+
+This is the single source of truth for both functions.
+
+```shell
+syntax = "proto3";
+package user.v1;
+
+message UserRequest {
+  int64 id = 1;
+}
+
+message UserResponse {
+  string name = 1;
+}
+```
+
+
+__The Producer (Lambda A)__
+
+Lambda A is triggered by an event (e.g., an API Gateway request), serializes the data, and pushes it to Kafka.
+
+```shell
+package main
+
+import (
+"context"
+"github.com/aws/aws-lambda-go/lambda"
+"github.com/segmentio/kafka-go"
+"google.golang.org/protobuf/proto"
+"user-proto/pb" // Generated code from your .proto
+)
+
+func HandleRequest(ctx context.Context, event MyEvent) error {
+// 1. Create your Protobuf message
+user := &pb.User{Id: event.UserID, Name: "John"}
+
+	// 2. Serialize to bytes
+	payload, _ := proto.Marshal(user)
+
+	// 3. Send to Kafka
+	writer := &kafka.Writer{
+		Addr:  kafka.TCP("your-kafka-broker:9092"),
+		Topic: "user-updates",
+	}
+	return writer.WriteMessages(ctx, kafka.Message{Value: payload})
+}
+
+func main() {
+  lambda.Start(HandleRequest)
+}
+```
+
+__The Consumer (Lambda B)__
+
+Lambda B is triggered by the Kafka topic. AWS handles the integration between MSK and Lambda, passing the message payload as anevent.
+
+```shell
+package main
+
+import (
+    "context"
+    "github.com/aws/aws-lambda-go/events"
+    "github.com/aws/aws-lambda-go/lambda"
+    "google.golang.org/protobuf/proto"
+    "user-proto/pb"
+)
+
+func HandleRequest(ctx context.Context, kafkaEvent events.KafkaEvent) error {
+  for _, record := range kafkaEvent.Records["user-updates"] {
+    // 1. Unmarshal the bytes back into the struct
+    user := &pb.User{}
+    proto.Unmarshal(record.Value, user)
+
+	// 2. Process logic
+	println("Processing user:", user.Name)
+  }
+  return nil
+}
+
+func main() {
+  lambda.Start(HandleRequest)
+}
+```
