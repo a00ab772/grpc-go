@@ -27,7 +27,7 @@ func main() {
 	}
 
 	// 3. Create Kafka Producer (Use 9093 as configured in docker-compose)
-	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "localhost:9092"})
+	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "localhost:9093"})
 	if err != nil {
 		log.Fatalf("Failed to create producer: %s", err)
 	}

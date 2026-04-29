@@ -18,7 +18,7 @@ func main() {
 	subject := "user-updates-value"
 
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
-		"bootstrap.servers": "localhost:9092",
+		"bootstrap.servers": "localhost:9093",
 		"group.id":          "my-local-group",
 		"auto.offset.reset": "earliest",
 	})
