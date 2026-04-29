@@ -145,7 +145,7 @@ import (
 "github.com/aws/aws-lambda-go/lambda"
 "github.com/segmentio/kafka-go"
 "google.golang.org/protobuf/proto"
-"user-proto/pb" // Generated code from your .proto
+"user-proto/pb" // Generated code from user.proto
 )
 
 func HandleRequest(ctx context.Context, event MyEvent) error {
