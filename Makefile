@@ -1,5 +1,6 @@
 GREET_DIR = greet/proto
 BLOG_DIR = blog/proto
+KAFKA_DIR = kafka/proto
 
 ifeq ($(OS), Windows_NT)
     OS = windows
@@ -28,10 +29,12 @@ build: generate
 	go build -o bin/greet/client ./greet/client/
 	go build -o bin/blog/server ./blog/server/
 	go build -o bin/blog/client ./blog/client/
+	go build -o bin/kafka/producer ./kafka/producer/
+	go build -o bin/kafka/consumer ./kafka/consumer/
 generate:
 	protoc --proto_path=${GREET_DIR} --go_out=${GREET_DIR} --go_opt=paths=source_relative --go-grpc_out=${GREET_DIR} --go-grpc_opt=paths=source_relative ${GREET_DIR}/*.proto
 	protoc --proto_path=${BLOG_DIR} --go_out=${BLOG_DIR} --go_opt=paths=source_relative --go-grpc_out=${BLOG_DIR} --go-grpc_opt=paths=source_relative ${BLOG_DIR}/*.proto
-
+	protoc --proto_path=${KAFKA_DIR} --go_out=${KAFKA_DIR} --go_opt=paths=source_relative --go-grpc_out=${KAFKA_DIR} --go-grpc_opt=paths=source_relative ${KAFKA_DIR}/*.proto
 clean:
 	@if [ "$(OS)" = "windows" ]; then \
 		powershell -Command "Remove-Item ${GREET_DIR}/*.pb.go -ErrorAction SilentlyContinue"; \

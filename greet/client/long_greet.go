@@ -5,16 +5,16 @@ import (
 	"log"
 	"time"
 
-	pb "example.com/m/greet/proto"
+	proto2 "example.com/m/greet/proto"
 )
 
-func doLongGreet(c pb.GreetServiceClient) {
+func doLongGreet(c proto2.GreetServiceClient) {
 	log.Printf("gPRC CLIENT STREAMING - Client side implementation")
 	log.Printf("==================================================")
 	log.Printf("")
 	log.Printf("calling doLongGreet with stream\n")
 
-	reqs := []*pb.GreetRequest{
+	reqs := []*proto2.GreetRequest{
 		{FirstName: "Arturo"},
 		{FirstName: "Bob"},
 		{FirstName: "John"},

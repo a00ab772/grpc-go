@@ -6,10 +6,10 @@ import (
 	"log"
 	"time"
 
-	pb "example.com/m/greet/proto"
+	proto2 "example.com/m/greet/proto"
 )
 
-func doGreetEveryone(c pb.GreetServiceClient) {
+func doGreetEveryone(c proto2.GreetServiceClient) {
 	log.Printf("gPRC BI-DIRECTIONAL STREAMING - Client side implementation")
 	log.Printf("==========================================================")
 	log.Printf("")
@@ -23,7 +23,7 @@ func doGreetEveryone(c pb.GreetServiceClient) {
 		log.Printf("GreetEveryone is streamed\n")
 	}
 
-	reqs := []*pb.GreetRequest{
+	reqs := []*proto2.GreetRequest{
 		{FirstName: "Arturo"},
 		{FirstName: "Bob"},
 		{FirstName: "John"},

@@ -199,3 +199,118 @@ func main() {
   lambda.Start(HandleRequest)
 }
 ```
+
+To ensure this implementation remains robust for production environments, the following best practices need to be considered:
+
+1. Schema Registry
+
+Instead of manually distributing the user.proto file, consider using the AWS Glue Schema Registry. This allows your producers and consumers to interact with a centralized repository, enabling schema validation and compatibility checks (e.g., Forward/Backward compatibility) at runtime rather than compile time.
+
+2. Error Handling and DLQs
+
+Since Lambda consumes Kafka events in batches, a failure in processing one message can affect the entire batch.
+
+Checkpointing: Ensure you are handling errors within the loop.
+
+Dead Letter Queues (DLQs): Configure your Lambda-Kafka event source mapping to send failed batches to an SQS queue or a separate Kafka topic after the retry policy is exhausted.
+
+3. Kafka Producer Persistence
+
+In your producer code, you are creating a new kafka.Writer inside the HandleRequest function.
+
+Optimization: This creates a new TCP connection on every invocation, which is expensive and inefficient.
+
+Refactor: Initialize the kafka.Writer in the init() function or as a global variable outside of the HandleRequest function. This allows the connection to be reused across warm Lambda invocations.
+
+4. Protobuf Best Practices
+
+Versioning: Always keep your .proto files in a dedicated repository or a shared library module.
+
+Compatibility: Never change the field numbers in existing messages. When adding new fields, always assign a new, unique tag number to prevent breaking changes.
+
+# gRPC backward compatibility
+
+Maintaining backward compatibility in gRPC is primarily managed through careful stewardship of your Protocol Buffers (.proto) files, as these define the contract between your clients and servers.
+
+Because Protobuf uses field tags (the numbers assigned to fields) rather than names for binary serialization, you have significant flexibility to evolve your API without breaking existing communication.
+
+## Key Principles for Backward Compatibility
+
+
+1. Additive Changes are SafeYou can always add new fields to a message.
+
+Existing clients will simply ignore these new fields because they are not part of their generated code, and the new server will handle the absence of these fields in requests from older clients (usually by defaulting to the zero-value).
+
+2. Field Tags are Permanent
+
+Never change a field tag number. The tag number is the identifier on the wire. Changing it is equivalent to changing the field entirely, which will break serialization for any client expecting the old tag.  Never reuse a tag number. Even if you delete a field, do not use its number for a new field.
+
+3. How to Safely Remove Fields
+
+To remove a field without breaking compatibility:
+
+* Use the `reserved` keyword: This prevents future developers from accidentally reusing the field name or tag number.Protocol Buffers
+
+* Do not delete the field entirely: Simply commenting it out is not enough because someone might accidentally reuse the tag. Marking it reserved ensures the protocol remains stable.
+
+4. Avoid Changing Data Types
+
+Changing the type of an existing field (e.g., from int32 to string) is a breaking change. If you need a different type, it is standard practice to add a new field with a new tag number and deprecate the old one.
+
+* Managing Breaking Changes
+
+When you absolutely must make a breaking change that cannot be handled via additive evolution, you should version your service.
+
+* Package Versioning: Include a version identifier in the package name (e.g., package my.service.v1;).Side-by-Side Deployment: When you move to v2, keep the v1 service running. This allows you to migrate clients gradually over time. You can host both v1 and v2 on the same server instance.
+
+__Esquema V1 (Original)__
+
+En la primera versión, el mensaje era plano y sencillo.
+
+```shell
+
+syntax = "proto3";
+
+package mi_empresa.usuario.v1;
+
+message Usuario {
+  int64 id = 1;
+  string email = 2;
+  string nombre = 3;
+  string apellido = 4;
+}
+```
+
+__Esquema V2 (Evolucionado)__
+
+Aquí aplicamos las reglas de compatibilidad: reservamos los campos antiguos y añadimos la nueva estructura, garantizando que el servicio siga funcionando con clientes antiguos.
+
+```shell
+syntax = "proto3";
+
+package mi_empresa.usuario.v2;
+
+message Usuario {
+  // Campos originales mantenidos
+  int64 id = 1;
+  string email = 2;
+
+  // Campos obsoletos marcados como reservados
+  // Nunca deben reutilizarse estos números (3, 4) ni nombres
+  reserved 3, 4;
+  reserved "nombre", "apellido";
+
+  // Nueva estructura añadida
+  NombreCompleto nombre_completo = 5;
+
+  // Nuevo campo añadido (compatible)
+  bool es_verificado = 6;
+}
+
+message NombreCompleto {
+  string primer_nombre = 1;
+  string segundo_nombre = 2;
+  string apellidos = 3;
+}
+```
+

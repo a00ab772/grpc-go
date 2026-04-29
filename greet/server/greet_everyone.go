@@ -4,10 +4,10 @@ import (
 	"io"
 	"log"
 
-	pb "example.com/m/greet/proto"
+	proto2 "example.com/m/greet/proto"
 )
 
-func (s *Server) GreetEveryone(stream pb.GreetService_GreetEveryoneServer) error {
+func (s *Server) GreetEveryone(stream proto2.GreetService_GreetEveryoneServer) error {
 	log.Printf("gPRC BI-DIRECTIONAL STREAMING - server side implementation")
 	log.Printf("==========================================================")
 	log.Printf("")
@@ -22,7 +22,7 @@ func (s *Server) GreetEveryone(stream pb.GreetService_GreetEveryoneServer) error
 		}
 
 		res := "Hello " + req.FirstName + "!"
-		err = stream.Send(&pb.GreetResponse{
+		err = stream.Send(&proto2.GreetResponse{
 			Result: res,
 		})
 

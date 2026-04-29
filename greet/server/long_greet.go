@@ -5,10 +5,10 @@ import (
 	"io"
 	"log"
 
-	pb "example.com/m/greet/proto"
+	proto2 "example.com/m/greet/proto"
 )
 
-func (s *Server) LongGreet(stream pb.GreetService_LongGreetServer) error {
+func (s *Server) LongGreet(stream proto2.GreetService_LongGreetServer) error {
 	log.Printf("gPRC CLIENT STREAMING - server side implementation")
 	log.Printf("==================================================")
 	log.Printf("")
@@ -20,7 +20,7 @@ func (s *Server) LongGreet(stream pb.GreetService_LongGreetServer) error {
 		req, err := stream.Recv()
 		if err == io.EOF {
 			log.Println("LongGreet End")
-			return stream.SendAndClose(&pb.GreetResponse{
+			return stream.SendAndClose(&proto2.GreetResponse{
 				Result: res,
 			})
 		}

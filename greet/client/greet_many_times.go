@@ -5,16 +5,16 @@ import (
 	"io"
 	"log"
 
-	pb "example.com/m/greet/proto"
+	proto2 "example.com/m/greet/proto"
 )
 
-func doGreetManyTimes(c pb.GreetServiceClient) {
+func doGreetManyTimes(c proto2.GreetServiceClient) {
 	log.Printf("gPRC SERVER STREAMING - Client side implementation")
 	log.Printf("==================================================")
 	log.Printf("")
 	log.Println("start doGreetManyTimesClient")
 
-	req := &pb.GreetRequest{
+	req := &proto2.GreetRequest{
 		FirstName: "Arturo",
 	}
 

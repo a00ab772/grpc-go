@@ -4,15 +4,15 @@ import (
 	"context"
 	"log"
 
-	pb "example.com/m/greet/proto"
+	proto2 "example.com/m/greet/proto"
 )
 
-func doGreet(c pb.GreetServiceClient) {
+func doGreet(c proto2.GreetServiceClient) {
 	log.Printf("gPRC UNARY - Client side implementation")
 	log.Printf("=======================================")
 	log.Printf("")
 	log.Println("call doGreet")
-	greet, err := c.Greet(context.Background(), &pb.GreetRequest{
+	greet, err := c.Greet(context.Background(), &proto2.GreetRequest{
 		FirstName: "Arturo",
 	})
 	if err != nil {
