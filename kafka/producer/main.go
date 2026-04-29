@@ -12,21 +12,17 @@ import (
 )
 
 func main() {
-	// 1. Schema Registry Client
 	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://localhost:8081"))
 	if err != nil {
 		log.Fatalf("Failed to create SR client: %s", err)
 	}
 
-	// 2. Configure Protobuf Serializer
-	// Removing the manual TopicNameStrategy assignment to fix the build error.
 	serConfig := protobuf.NewSerializerConfig()
 	ser, err := protobuf.NewSerializer(srClient, serde.ValueSerde, serConfig)
 	if err != nil {
 		log.Fatalf("Failed to create serializer: %s", err)
 	}
 
-	// 3. Create Kafka Producer (Use 9093 as configured in docker-compose)
 	p, err := kafka.NewProducer(&kafka.ConfigMap{"bootstrap.servers": "localhost:9093"})
 	if err != nil {
 		log.Fatalf("Failed to create producer: %s", err)
@@ -35,8 +31,7 @@ func main() {
 
 	topic := "user-updates-value"
 
-	// 4. Produce Messages
-	for i := 1; i <= 10; i++ {
+	for i := 1; ; i++ {
 		user := &pb.UserRequest{Id: int64(i)}
 
 		payload, err := ser.Serialize(topic, user)

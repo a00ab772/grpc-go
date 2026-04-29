@@ -12,9 +12,7 @@ import (
 )
 
 func main() {
-	// Must match the topic used in the producer
 	topic := "user-updates-value"
-	// The subject used to fetch the schema from the registry
 	subject := "user-updates-value"
 
 	c, err := kafka.NewConsumer(&kafka.ConfigMap{
@@ -29,13 +27,11 @@ func main() {
 
 	c.SubscribeTopics([]string{topic}, nil)
 
-	// Initialize SR Client
 	srClient, err := schemaregistry.NewClient(schemaregistry.NewConfig("http://localhost:8081"))
 	if err != nil {
 		log.Fatalf("Failed to create SR client: %s", err)
 	}
 
-	// Initialize Deserializer
 	deser, err := protobuf.NewDeserializer(srClient, serde.ValueSerde, protobuf.NewDeserializerConfig())
 	if err != nil {
 		log.Fatalf("Failed to create deserializer: %s", err)
@@ -45,7 +41,6 @@ func main() {
 		msg, err := c.ReadMessage(-1)
 		if err == nil {
 			user := &pb.UserRequest{}
-			// DeserializeInto uses the registered schema for this subject
 			err := deser.DeserializeInto(subject, msg.Value, user)
 			if err != nil {
 				log.Printf("Deserialization error: %s", err)
