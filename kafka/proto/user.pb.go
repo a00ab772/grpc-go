@@ -118,7 +118,7 @@ const file_user_proto_rawDesc = "" +
 	"\vUserRequest\x12\x0e\n" +
 	"\x02id\x18\x01 \x01(\x03R\x02id\"\x1e\n" +
 	"\fUserResponse\x12\x0e\n" +
-	"\x02id\x18\x01 \x01(\x03R\x02idB#Z!example.com/m/grpc-go/greet/protob\x06proto3"
+	"\x02id\x18\x01 \x01(\x03R\x02idB#Z!example.com/m/grpc-go/kafka/protob\x06proto3"
 
 var (
 	file_user_proto_rawDescOnce sync.Once

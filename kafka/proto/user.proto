@@ -1,7 +1,7 @@
 syntax = "proto3";
 package user.v1;
 
-option go_package = "example.com/m/grpc-go/greet/proto";
+option go_package = "example.com/m/grpc-go/kafka/proto";
 
 message UserRequest {
   int64 id = 1;
