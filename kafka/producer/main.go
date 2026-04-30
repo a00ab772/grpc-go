@@ -54,5 +54,4 @@ func main() {
 			fmt.Printf("Successfully produced %d messages.\n", i)
 		}
 	}
-
 }

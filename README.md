@@ -3,8 +3,11 @@
 This README.md document is not completed, please go through the complete documentation in the file included in this project:
 
 * [event-driven-kafka-communication-using-grpc-protobuf-schema.docx](event-driven-kafka-communication-using-grpc-protobuf-schema.docx)
+* [AWS-Lambda-functions-communication-via-event-driven-kafka-events-validated-via-grpc-protobuf-schema.docx](AWS-Lambda-functions-communication-via-event-driven-kafka-events-validated-via-grpc-protobuf-schema.docx)
 * [grpc-go.docx](grpc-go.docx)
 * [Typescript.docx](Typescript.docx)
+
+The below documentation is not yet completed, and will contain extracts of the above  documents.
 
 # Pre-requisites
 

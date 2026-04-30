@@ -10,11 +10,3 @@ message UserRequest {
 message UserResponse {
   int64 id = 1;
 }
-
-/*
-Note:
-
-In the Event-Driven / Kafka architecture you described earlier, adding a service is unnecessary and can be misleading.
-
-Reason: Kafka is asynchronous, and service implies Request-Response paradigm.
- */
