@@ -1,3 +1,10 @@
+# DOCUMENTATION
+
+This README.md document is not completed, please go through the complete documentation in the file included in this project:
+
+* [grpc-go.docx](grpc-go.docx)
+
+
 
 # Pre-requisites
 

@@ -48,8 +48,11 @@ func main() {
 		if err != nil {
 			log.Printf("Produce error: %s", err)
 		}
+
+		if i%1000 == 0 {
+			p.Flush(15 * 10)
+			fmt.Printf("Successfully produced %d messages.\n", i)
+		}
 	}
 
-	p.Flush(15 * 1000)
-	fmt.Println("Produced 10 messages successfully.")
 }
