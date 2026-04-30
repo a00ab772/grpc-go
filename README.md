@@ -2,9 +2,9 @@
 
 This README.md document is not completed, please go through the complete documentation in the file included in this project:
 
+* [event-driven-kafka-communication-using-grpc-protobuf-schema.docx](event-driven-kafka-communication-using-grpc-protobuf-schema.docx)
 * [grpc-go.docx](grpc-go.docx)
-
-
+* [Typescript.docx](Typescript.docx)
 
 # Pre-requisites
 
