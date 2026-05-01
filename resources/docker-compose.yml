@@ -1,5 +1,33 @@
 #version: '3.1'
 services:
+  # localhost:5432 with root/root
+  # you can use JdbcSourceConnector / JdbcSinkConnector against it straight away with this connection string:
+  # jdbc:postgresql://postgres:5432/main
+  postgres:
+    image: postgres:16
+    container_name: postgres
+    restart: always
+    ports:
+      - "5432:5432"
+    environment:
+      POSTGRES_USER: root
+      POSTGRES_PASSWORD: root
+      POSTGRES_DB: main
+    command:
+      - postgres
+      - -c
+      - wal_level=logical
+      - -c
+      - max_replication_slots=10
+      - -c
+      - max_wal_senders=10
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U root -d main"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
   mongo:
     image: mongo
     restart: always
@@ -31,7 +59,7 @@ services:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_log:/var/lib/zookeeper/log
   kafka:
-    image: confluentinc/cp-kafka:7.5.0
+    image: confluentinc/cp-server:7.5.0   # <-- change from cp-kafka
     container_name: kafka
     ports:
       - "9092:9092"
@@ -43,6 +71,11 @@ services:
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      KAFKA_METRIC_REPORTERS: io.confluent.metrics.reporter.ConfluentMetricsReporter
+      CONFLUENT_METRICS_REPORTER_BOOTSTRAP_SERVERS: kafka:9092
+      CONFLUENT_METRICS_REPORTER_TOPIC_REPLICAS: 1
+      CONFLUENT_METRICS_ENABLE: "true"
+      CONFLUENT_SUPPORT_CUSTOMER_ID: anonymous
     volumes:
       - kafka_data:/var/lib/kafka/data
     healthcheck:
@@ -144,3 +177,4 @@ volumes:
   zookeeper_data:
   zookeeper_log:
   kafka_connect_data:
+  postgres_data:
