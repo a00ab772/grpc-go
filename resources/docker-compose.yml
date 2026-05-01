@@ -1,5 +1,4 @@
-version: '3.1'
-
+#version: '3.1'
 services:
   mongo:
     image: mongo
@@ -11,7 +10,6 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: root
     volumes:
       - db_data:/data/db
-
   # log in localhost:8099 with admin/pass
   mongo-express:
     image: mongo-express
@@ -24,13 +22,14 @@ services:
       ME_CONFIG_MONGODB_URL: mongodb://root:root@mongo:27017/
     depends_on:
       - mongo
-
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
       ZOOKEEPER_CLIENT_PORT: 2181
       ZOOKEEPER_TICK_TIME: 2000
-
+    volumes:
+      - zookeeper_data:/var/lib/zookeeper/data
+      - zookeeper_log:/var/lib/zookeeper/log
   kafka:
     image: confluentinc/cp-kafka:7.5.0
     container_name: kafka
@@ -40,28 +39,108 @@ services:
     environment:
       KAFKA_BROKER_ID: 1
       KAFKA_ZOOKEEPER_CONNECT: zookeeper:2181
-      # Define internal and host-facing listeners
       KAFKA_ADVERTISED_LISTENERS: PLAINTEXT://kafka:9092,PLAINTEXT_HOST://localhost:9093
       KAFKA_LISTENERS: PLAINTEXT://0.0.0.0:9092,PLAINTEXT_HOST://0.0.0.0:9093
       KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT
       KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+    volumes:
+      - kafka_data:/var/lib/kafka/data
     healthcheck:
       test: ["CMD", "kafka-broker-api-versions", "--bootstrap-server", "localhost:9092"]
       interval: 5s
       timeout: 5s
       retries: 5
-
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
     container_name: schema-registry
     depends_on:
       kafka:
-        condition: service_healthy # Wait for the health check to pass
+        condition: service_healthy
     ports:
       - "8081:8081"
     environment:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+  # log in localhost:8083
+  kafka-connect:
+    image: confluentinc/cp-kafka-connect:7.5.0
+    container_name: kafka-connect
+    hostname: kafka-connect                          # add this
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+    ports:
+      - "8083:8083"
+    environment:
+      CONNECT_BOOTSTRAP_SERVERS: kafka:9092
+      CONNECT_REST_ADVERTISED_HOST_NAME: kafka-connect
+      CONNECT_REST_PORT: 8083
+      CONNECT_GROUP_ID: kafka-connect-group
+      CONNECT_CONFIG_STORAGE_TOPIC: _connect-configs
+      CONNECT_OFFSET_STORAGE_TOPIC: _connect-offsets
+      CONNECT_STATUS_STORAGE_TOPIC: _connect-status
+      CONNECT_CONFIG_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_OFFSET_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_STATUS_STORAGE_REPLICATION_FACTOR: 1
+      CONNECT_KEY_CONVERTER: org.apache.kafka.connect.storage.StringConverter
+      CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
+      CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
+#      CONNECT_REST_EXTENSION_CLASSES: org.apache.kafka.connect.rest.basic.auth.extension.BasicAuthSecurityRestExtension  # remove if not needed
+    command:
+      - bash
+      - -c
+      - |
+        echo "Installing connectors via confluent-hub..."
+        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:latest
+        confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:latest
+        confluent-hub install --no-prompt confluentinc/kafka-connect-http:latest
+        confluent-hub install --no-prompt debezium/debezium-connector-mongodb:2.4.2
+        confluent-hub install --no-prompt debezium/debezium-connector-mysql:2.4.2
+        confluent-hub install --no-prompt debezium/debezium-connector-postgresql:2.4.2
+
+        echo "Installing MongoDB Kafka connector manually..."
+        mkdir -p /usr/share/confluent-hub-components/mongodb-kafka-connector/lib
+        curl -fsSL "https://repo1.maven.org/maven2/org/mongodb/kafka/mongo-kafka-connect/1.13.0/mongo-kafka-connect-1.13.0-all.jar" \
+          -o /usr/share/confluent-hub-components/mongodb-kafka-connector/lib/mongo-kafka-connect.jar
+        echo '{"name":"mongodb-kafka-connector","version":"1.13.0","title":"MongoDB Kafka Connector","description":"MongoDB sink and source connector"}' \
+          > /usr/share/confluent-hub-components/mongodb-kafka-connector/manifest.json
+
+        echo "Launching Kafka Connect..."
+        /etc/confluent/docker/run
+    volumes:
+      - kafka_connect_data:/var/lib/kafka/data
+
+  control-center:
+    image: confluentinc/cp-enterprise-control-center:7.5.0
+    container_name: control-center
+    depends_on:
+      kafka:
+        condition: service_healthy
+      schema-registry:
+        condition: service_started
+      kafka-connect:
+        condition: service_started
+    ports:
+      - "9021:9021"
+    environment:
+      CONTROL_CENTER_BOOTSTRAP_SERVERS: kafka:9092
+      CONTROL_CENTER_ZOOKEEPER_CONNECT: zookeeper:2181
+      CONTROL_CENTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
+      CONTROL_CENTER_CONNECT_CLUSTER: http://kafka-connect:8083
+      CONTROL_CENTER_CONNECT_connect1_CLUSTER: http://kafka-connect:8083
+      CONTROL_CENTER_CONNECT_HEALTHCHECK_ENDPOINT: /connectors  # use /connectors instead of /v1/metadata/id
+      CONTROL_CENTER_REPLICATION_FACTOR: 1
+      CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
+      CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
+      CONFLUENT_METRICS_TOPIC_REPLICATION: 1
+      PORT: 9021
 volumes:
   db_data:
+  kafka_data:
+  zookeeper_data:
+  zookeeper_log:
+  kafka_connect_data:
