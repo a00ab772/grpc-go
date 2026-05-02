@@ -27,6 +27,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
   mongo:
     image: mongo
     restart: always
@@ -37,6 +38,7 @@ services:
       MONGO_INITDB_ROOT_PASSWORD: root
     volumes:
       - db_data:/data/db
+
   # log in localhost:8099 with admin/pass
   mongo-express:
     image: mongo-express
@@ -49,6 +51,37 @@ services:
       ME_CONFIG_MONGODB_URL: mongodb://root:root@mongo:27017/
     depends_on:
       - mongo
+
+  # localhost:6379 — no auth by default
+  # connect with: redis-cli -h localhost -p 6379
+  # Redis Commander UI → localhost:8090
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    ports:
+      - "6379:6379"
+    command: redis-server --save 60 1 --loglevel warning
+    volumes:
+      - redis_data:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: redis-commander
+    restart: always
+    ports:
+      - "8090:8081"
+    environment:
+      REDIS_HOSTS: local:redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
+
   zookeeper:
     image: confluentinc/cp-zookeeper:latest
     environment:
@@ -57,8 +90,9 @@ services:
     volumes:
       - zookeeper_data:/var/lib/zookeeper/data
       - zookeeper_log:/var/lib/zookeeper/log
+
   kafka:
-    image: confluentinc/cp-server:7.5.0   # <-- change from cp-kafka
+    image: confluentinc/cp-server:7.5.0
     container_name: kafka
     ports:
       - "9092:9092"
@@ -82,6 +116,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
+
   schema-registry:
     image: confluentinc/cp-schema-registry:latest
     container_name: schema-registry
@@ -94,11 +129,14 @@ services:
       SCHEMA_REGISTRY_KAFKASTORE_BOOTSTRAP_SERVERS: PLAINTEXT://kafka:9092
       SCHEMA_REGISTRY_HOST_NAME: schema-registry
       SCHEMA_REGISTRY_LISTENERS: http://0.0.0.0:8081
+
   # log in localhost:8083
+  # built from ./Dockerfile  with this command
+  # docker compose build kafka-connect
   kafka-connect:
-    image: confluentinc/cp-kafka-connect:7.5.0
+    build: .
     container_name: kafka-connect
-    hostname: kafka-connect                          # add this
+    hostname: kafka-connect
     depends_on:
       kafka:
         condition: service_healthy
@@ -121,28 +159,6 @@ services:
       CONNECT_VALUE_CONVERTER: io.confluent.connect.avro.AvroConverter
       CONNECT_VALUE_CONVERTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONNECT_PLUGIN_PATH: /usr/share/java,/usr/share/confluent-hub-components
-#      CONNECT_REST_EXTENSION_CLASSES: org.apache.kafka.connect.rest.basic.auth.extension.BasicAuthSecurityRestExtension  # remove if not needed
-    command:
-      - bash
-      - -c
-      - |
-        echo "Installing connectors via confluent-hub..."
-        confluent-hub install --no-prompt confluentinc/kafka-connect-jdbc:latest
-        confluent-hub install --no-prompt confluentinc/kafka-connect-elasticsearch:latest
-        confluent-hub install --no-prompt confluentinc/kafka-connect-http:latest
-        confluent-hub install --no-prompt debezium/debezium-connector-mongodb:2.4.2
-        confluent-hub install --no-prompt debezium/debezium-connector-mysql:2.4.2
-        confluent-hub install --no-prompt debezium/debezium-connector-postgresql:2.4.2
-
-        echo "Installing MongoDB Kafka connector manually..."
-        mkdir -p /usr/share/confluent-hub-components/mongodb-kafka-connector/lib
-        curl -fsSL "https://repo1.maven.org/maven2/org/mongodb/kafka/mongo-kafka-connect/1.13.0/mongo-kafka-connect-1.13.0-all.jar" \
-          -o /usr/share/confluent-hub-components/mongodb-kafka-connector/lib/mongo-kafka-connect.jar
-        echo '{"name":"mongodb-kafka-connector","version":"1.13.0","title":"MongoDB Kafka Connector","description":"MongoDB sink and source connector"}' \
-          > /usr/share/confluent-hub-components/mongodb-kafka-connector/manifest.json
-
-        echo "Launching Kafka Connect..."
-        /etc/confluent/docker/run
     volumes:
       - kafka_connect_data:/var/lib/kafka/data
 
@@ -164,69 +180,12 @@ services:
       CONTROL_CENTER_SCHEMA_REGISTRY_URL: http://schema-registry:8081
       CONTROL_CENTER_CONNECT_CLUSTER: http://kafka-connect:8083
       CONTROL_CENTER_CONNECT_connect1_CLUSTER: http://kafka-connect:8083
-      CONTROL_CENTER_CONNECT_HEALTHCHECK_ENDPOINT: /connectors  # use /connectors instead of /v1/metadata/id
+      CONTROL_CENTER_CONNECT_HEALTHCHECK_ENDPOINT: /connectors
       CONTROL_CENTER_REPLICATION_FACTOR: 1
       CONTROL_CENTER_INTERNAL_TOPICS_PARTITIONS: 1
       CONTROL_CENTER_MONITORING_INTERCEPTOR_TOPIC_PARTITIONS: 1
       CONFLUENT_METRICS_TOPIC_REPLICATION: 1
       PORT: 9021
-
-  # Prometheus → localhost:9090
-  # Grafana → localhost:3000 (admin/admin)
-  # Loki → via Grafana's Explore tab, select Loki datasource — all container logs will appear there automatically via Promtail
-#  prometheus:
-#    image: prom/prometheus:latest
-#    container_name: prometheus
-#    ports:
-#      - "9090:9090"
-#    volumes:
-#      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-#      - prometheus_data:/prometheus
-#    command:
-#      - --config.file=/etc/prometheus/prometheus.yml
-#      - --storage.tsdb.path=/prometheus
-#      - --web.enable-lifecycle
-#    restart: always
-#
-#  grafana:
-#    image: grafana/grafana:latest
-#    container_name: grafana
-#    ports:
-#      - "3000:3000"
-#    environment:
-#      GF_SECURITY_ADMIN_USER: admin
-#      GF_SECURITY_ADMIN_PASSWORD: admin
-#      GF_PATHS_PROVISIONING: /etc/grafana/provisioning
-#    volumes:
-#      - grafana_data:/var/lib/grafana
-#      - ./grafana/provisioning:/etc/grafana/provisioning
-#    depends_on:
-#      - prometheus
-#      - loki
-#    restart: always
-#
-#  loki:
-#    image: grafana/loki:latest
-#    container_name: loki
-#    ports:
-#      - "3100:3100"
-#    volumes:
-#      - loki_data:/loki
-#      - ./loki-config.yml:/etc/loki/local-config.yaml
-#    command: -config.file=/etc/loki/local-config.yaml
-#    restart: always
-#
-#  promtail:
-#    image: grafana/promtail:latest
-#    container_name: promtail
-#    volumes:
-#      - /var/lib/docker/containers:/var/lib/docker/containers:ro
-#      - /var/run/docker.sock:/var/run/docker.sock
-#      - ./promtail-config.yml:/etc/promtail/config.yml
-#    command: -config.file=/etc/promtail/config.yml
-#    depends_on:
-#      - loki
-#    restart: always
 
 volumes:
   db_data:
@@ -235,6 +194,4 @@ volumes:
   zookeeper_log:
   kafka_connect_data:
   postgres_data:
-#  prometheus_data:
-#  grafana_data:
-#  loki_data:
+  redis_data:
