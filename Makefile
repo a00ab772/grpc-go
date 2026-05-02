@@ -39,6 +39,7 @@ generate:
 	protoc --proto_path=${BLOG_DIR} --go_out=${BLOG_DIR} --go_opt=paths=source_relative --go-grpc_out=${BLOG_DIR} --go-grpc_opt=paths=source_relative ${BLOG_DIR}/*.proto
 	protoc --proto_path=${KAFKA_DIR} --go_out=${KAFKA_DIR} --go_opt=paths=source_relative --go-grpc_out=${KAFKA_DIR} --go-grpc_opt=paths=source_relative ${KAFKA_DIR}/*.proto
 	protoc --proto_path=${KAFKA_V2_DIR} --go_out=${KAFKA_V2_DIR} --go_opt=paths=source_relative --go-grpc_out=${KAFKA_V2_DIR} --go-grpc_opt=paths=source_relative ${KAFKA_V2_DIR}/*.proto
+
 clean:
 	@if [ "$(OS)" = "windows" ]; then \
 		powershell -Command "Remove-Item ${GREET_DIR}/*.pb.go -ErrorAction SilentlyContinue"; \
