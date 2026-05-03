@@ -8,7 +8,7 @@ import (
 	"google.golang.org/grpc"
 )
 
-func (s *Server) GreetManyTimes(in *pb.GreetRequest, stream grpc.ServerStreamingServer[pb.GreetResponse]) error {
+func (s *Server) GreetManyTimes(in *pb.GreetRequest, stream pb.GreetService_GreetManyTimesServer) error {
 	log.Printf("gPRC SERVER STREAMING - server side implementation")
 	log.Printf("==================================================")
 	log.Printf("")
